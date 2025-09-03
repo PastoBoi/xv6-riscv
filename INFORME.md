@@ -20,3 +20,12 @@ Fecha: 08/28/2025
 6. Luego compilamos usando el makefile con el comando "make"
 
 7. Luego usamos QEMU, que es un emulador de hardware con el comando "make qemu"
+
+## Problemas encontrados y soluciones (con ayuda de ChatGPT)
+
+- *Error de compilación:* Couldn't find a riscv64 version of GCC/binutils. 
+  *Solución:* Instalé gcc-riscv64-unknown-elf y binutils-riscv64-unknown-elf.
+- *Error con QEMU:* qemu-system-riscv64: not found. 
+  *Solución:* Instalé qemu-system-misc.
+- *Configuración de GitHub/SSH:* Problemas iniciales al autenticar la rama en mi fork. 
+  *Solución:* Generé clave SSH, la agregué a GitHub y configuré correctamente el remoto a mi fork.

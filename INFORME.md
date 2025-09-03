@@ -2,7 +2,7 @@
 
 ## Informacion Personal
 
-Nombre: Felipe Céspedes 
+Nombre: Felipe Céspedes y Ignacio Vidal
 Fecha: 08/28/2025
 
 ## Paso a Paso

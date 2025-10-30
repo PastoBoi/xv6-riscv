@@ -430,7 +430,7 @@ scheduler(void)
   
   c->proc = 0;
   for(;;){
-    // Evitar interrupciones mientras elegimos proceso
+    // Habilitar interrupciones en esta CPU
     intr_on();
     
     // Calcular el total de tickets de procesos RUNNABLE
@@ -448,8 +448,8 @@ scheduler(void)
       continue;
     }
     
-    // Generar número aleatorio entre 1 y total_tickets
-    int winner = (ticks * 1103515245 + 12345) % total_tickets + 1;
+    // Generar número aleatorio entre 0 y total_tickets-1
+    int winner = (ticks * 1103515245 + 12345) % total_tickets;
     
     // Encontrar el proceso ganador
     int accumulated = 0;
@@ -459,21 +459,23 @@ scheduler(void)
       if(p->state == RUNNABLE) {
         accumulated += p->tickets;
         
-        if(accumulated >= winner) {
+        if(accumulated > winner) {
           // Este proceso gana la lotería
           p->state = RUNNING;
-          p->cpu_slices++;  // Incrementar contador
+          p->cpu_slices++;
           c->proc = p;
           
           swtch(&c->context, &p->context);
           
+          // El proceso terminó su turno
           c->proc = 0;
+          
+          release(&p->lock);
+          break;  // Salir del loop de selección
         }
       }
-      release(&p->lock);
       
-      if(accumulated >= winner)
-        break;
+      release(&p->lock);
     }
   }
 }

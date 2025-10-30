@@ -113,10 +113,12 @@ sys_settickets(void)
   
   argint(0, &n);
   
-  if(n < 1)
+  if(n < 1) {
     n = 1;
-    
+  }
+  
   struct proc *p = myproc();
+  
   acquire(&p->lock);
   p->tickets = n;
   release(&p->lock);

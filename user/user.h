@@ -25,6 +25,8 @@ char* sys_sbrk(int,int);
 int pause(int);
 int uptime(void);
 int settickets(int);
+int yield(void);
+int sleep(int);
 
 // ulib.c
 int stat(const char*, struct stat*);

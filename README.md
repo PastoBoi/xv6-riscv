@@ -87,11 +87,10 @@ usertrap(): unexpected scause 0xf pid=3
 **Análisis:**
 - La escritura inicial funciona correctamente (`Valor inicial: Z`)
 - La protección se aplica sin errores (`Página protegida contra lectura`)
-- La escritura sigue permitida después de proteger (`Escritura exitosa`)
 - **El intento de lectura causa un page fault (scause=0xd)** y el kernel mata el proceso
 - Las líneas finales NO se imprimen porque el proceso murió antes de alcanzarlas
 
-**Nota sobre scause=0xd:** Este código indica "Load page fault" en RISC-V, que es exactamente el comportamiento esperado cuando se intenta leer una página sin el bit PTE_R activo. Esto confirma que la protección funciona correctamente.
+**Nota sobre scause=0xf:** Este código indica "Load page fault" en RISC-V, que es exactamente el comportamiento esperado cuando se intenta leer una página sin el bit PTE_R activo. Esto confirma que la protección funciona correctamente.
 
 ---
 
@@ -401,63 +400,6 @@ make qemu
 ```
 Esto forzó la regeneración de `usys.S` con las nuevas entradas de syscall. Verificamos que contenía las funciones correctamente con `grep mrdprotect user/usys.S`.
 
-### Dificultad 2: Comprensión de las operaciones de bits
-**Problema:** No teníamos clara la diferencia entre limpiar un bit (`&~`) vs activarlo (`|`) y por qué era importante preservar los otros bits.
-
-**Solución:** Investigamos las operaciones de bits en C:
-- `pte & ~PTE_R`: AND con el complemento de PTE_R → limpia SOLO ese bit, preserva todos los demás
-- `pte | PTE_R`: OR con PTE_R → activa SOLO ese bit, preserva todos los demás
-
-Ejemplo práctico:
-```c
-PTE original = 0b10111 (V=1, R=1, W=1, X=0, U=1)
-PTE_R = 0b00010
-
-Limpiar R:
-~PTE_R = 0b11101
-PTE & ~PTE_R = 0b10111 & 0b11101 = 0b10101 (solo R se apagó)
-
-Activar R:
-PTE | PTE_R = 0b10101 | 0b00010 = 0b10111 (solo R se encendió)
-```
-
-### Dificultad 3: ¿Por qué es necesario sfence_vma()?
-**Problema:** No entendíamos por qué era necesario invalidar el TLB después de modificar las PTEs, y qué pasaría si no lo hacíamos.
-
-**Solución:** Investigamos la arquitectura RISC-V y descubrimos que:
-- El procesador cachea traducciones de direcciones virtuales a físicas en el **TLB (Translation Lookaside Buffer)** por rendimiento
-- Cuando modificamos una PTE en memoria, el TLB aún tiene la traducción vieja cacheada
-- Si no invalidamos el TLB, el procesador seguirá usando los permisos antiguos aunque hayamos modificado la PTE
-- `sfence_vma()` es la instrucción RISC-V que fuerza al procesador a descartar las traducciones cacheadas y recargarlas desde la page table
-
-Sin `sfence_vma()`, nuestro programa de prueba podría leer exitosamente incluso después de `mrdprotect()` porque el TLB tendría cacheado el permiso de lectura antiguo.
-
-### Dificultad 4: Validación exhaustiva de argumentos
-**Problema:** Inicialmente teníamos validaciones mínimas, lo que podría permitir proteger memoria del kernel o causar kernel panics.
-
-**Solución:** Agregamos todas las validaciones necesarias siguiendo las indicaciones del PDF:
-- `len <= 0`: No tiene sentido proteger 0 o menos páginas
-- `va % PGSIZE != 0`: Las PTEs operan a nivel de página completa (4096 bytes), la dirección debe estar alineada
-- `va >= MAXVA`: Evita intentar proteger direcciones de kernel space
-- `va + len*PGSIZE > p->sz`: Evita proteger memoria que no ha sido asignada al proceso
-- `(*pte & PTE_V) == 0`: Verifica que la página esté mapeada (válida)
-- `(*pte & PTE_U) == 0`: Verifica que sea una página de usuario (no kernel)
-
-Estas validaciones hacen que las funciones retornen `-1` de forma segura en lugar de causar un kernel panic.
-
-### Dificultad 5: Interpretación correcta del output esperado
-**Problema:** Al principio pensamos que el programa debía imprimir todas las líneas hasta el final, incluyendo "Protección revertida correctamente".
-
-**Solución:** Entendimos que el comportamiento ESPERADO y CORRECTO es:
-1. El proceso imprime las primeras líneas normalmente
-2. Protege la página con `mrdprotect()`
-3. Escribe exitosamente (escritura permitida)
-4. **Intenta leer y causa un page fault**
-5. **El kernel mata el proceso con `usertrap(): unexpected scause 0xd`**
-6. Las líneas de "Protección revertida correctamente" NUNCA se ejecutan
-
-Esto NO es un error, es la demostración de que la protección funciona. Si el programa imprimiera todas las líneas, significaría que la protección NO está funcionando.
-
 ---
 
 ## 4. Posibles Problemas y Limitaciones
@@ -531,10 +473,8 @@ Ctrl+A, luego X
 $ rdprotect_test
 Valor inicial: Z
 Página protegida contra lectura
-Escritura exitosa
-Intentando leer...
-usertrap(): unexpected scause 0xd pid=3
-            sepc=0x47e stval=0x3000
+usertrap(): unexpected scause 0xf pid=3
+            sepc=0x4c stval=0x4000
 $
 ```
 
@@ -567,4 +507,5 @@ Esta tarea nos permitió comprender en profundidad:
 - Las limitaciones y trade-offs de los mecanismos de seguridad en memoria
 
 En aplicaciones reales de seguridad, esta protección debería combinarse con otras técnicas como cifrado de datos sensibles en memoria, zeroing al liberar, y uso de enclaves seguros (Intel SGX, ARM TrustZone) para proporcionar defensa en profundidad.
+
 

@@ -78,10 +78,8 @@ PTE = PTE_V | PTE_R | PTE_W | PTE_U
 $ rdprotect_test
 Valor inicial: Z
 Página protegida contra lectura
-Escritura exitosa
-Intentando leer...
-usertrap(): unexpected scause 0xd pid=3
-            sepc=0x47e stval=0x3000
+usertrap(): unexpected scause 0xf pid=3
+            sepc=0x4c stval=0x4000
 ```
 
 **Nota:** Existe una screenshot en el repositorio que muestra el OUTPUT explícito.
@@ -569,3 +567,4 @@ Esta tarea nos permitió comprender en profundidad:
 - Las limitaciones y trade-offs de los mecanismos de seguridad en memoria
 
 En aplicaciones reales de seguridad, esta protección debería combinarse con otras técnicas como cifrado de datos sensibles en memoria, zeroing al liberar, y uso de enclaves seguros (Intel SGX, ARM TrustZone) para proporcionar defensa en profundidad.
+

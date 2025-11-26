@@ -3,7 +3,7 @@
 **Grupo:** E  
 **Integrantes:** Ignacio Vidal / Felipe Céspedes  
 **Fecha:** 26 de Noviembre de 2025  
-**Repositorio:** https://github.com/NachoVidal-14/xv6-riscv/tree/GrupoE_Tarea3
+**Repositorio:** https://github.com/PastoBoi/xv6-riscv/blob/T3/README.md
 
 ---
 
@@ -507,5 +507,6 @@ Esta tarea nos permitió comprender en profundidad:
 - Las limitaciones y trade-offs de los mecanismos de seguridad en memoria
 
 En aplicaciones reales de seguridad, esta protección debería combinarse con otras técnicas como cifrado de datos sensibles en memoria, zeroing al liberar, y uso de enclaves seguros (Intel SGX, ARM TrustZone) para proporcionar defensa en profundidad.
+
 
 

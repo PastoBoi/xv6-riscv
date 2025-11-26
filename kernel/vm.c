@@ -484,3 +484,101 @@ ismapped(pagetable_t pagetable, uint64 va)
   }
   return 0;
 }
+
+// Proteger páginas contra lectura
+int
+mrdprotect(void *addr, int len)
+{
+  struct proc *p = myproc();
+  uint64 va = (uint64)addr;
+  pte_t *pte;
+  
+  // Validar argumentos
+  if(len <= 0)
+    return -1;
+  
+  // Verificar alineación de página
+  if(va % PGSIZE != 0)
+    return -1;
+  
+  // Verificar que está en espacio de usuario
+  if(va >= MAXVA)
+    return -1;
+  
+  // Verificar que no excede el tamaño del proceso
+  if(va + len * PGSIZE > p->sz)
+    return -1;
+  
+  // Modificar cada página
+  for(int i = 0; i < len; i++){
+    uint64 page_va = va + i * PGSIZE;
+    
+    // Obtener PTE
+    pte = walk(p->pagetable, page_va, 0);
+    if(pte == 0)
+      return -1;
+    
+    // Verificar que la página es válida y de usuario
+    if((*pte & PTE_V) == 0)
+      return -1;
+    if((*pte & PTE_U) == 0)
+      return -1;
+    
+    // Limpiar bit de lectura
+    *pte = *pte & ~PTE_R;
+  }
+  
+  // Invalidar TLB
+  sfence_vma();
+  
+  return 0;
+}
+
+// Restaurar protección de lectura
+int
+munrdprotect(void *addr, int len)
+{
+  struct proc *p = myproc();
+  uint64 va = (uint64)addr;
+  pte_t *pte;
+  
+  // Validar argumentos
+  if(len <= 0)
+    return -1;
+  
+  // Verificar alineación de página
+  if(va % PGSIZE != 0)
+    return -1;
+  
+  // Verificar que está en espacio de usuario
+  if(va >= MAXVA)
+    return -1;
+  
+  // Verificar que no excede el tamaño del proceso
+  if(va + len * PGSIZE > p->sz)
+    return -1;
+  
+  // Modificar cada página
+  for(int i = 0; i < len; i++){
+    uint64 page_va = va + i * PGSIZE;
+    
+    // Obtener PTE
+    pte = walk(p->pagetable, page_va, 0);
+    if(pte == 0)
+      return -1;
+    
+    // Verificar que la página es válida y de usuario
+    if((*pte & PTE_V) == 0)
+      return -1;
+    if((*pte & PTE_U) == 0)
+      return -1;
+    
+    // Restaurar bit de lectura
+    *pte = *pte | PTE_R;
+  }
+  
+  // Invalidar TLB
+  sfence_vma();
+  
+  return 0;
+}
